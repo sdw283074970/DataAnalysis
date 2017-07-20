@@ -1,2 +1,2 @@
 # DataAnalysis
-Student Project in Stony Brook University
+My student projects in Stony Brook University
