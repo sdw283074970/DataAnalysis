@@ -1,0 +1,51 @@
+library(reshape)
+library(readr)
+library(RSQLite)
+library(sqldf)
+library(readxl)
+library(e1071)
+library(lattice)
+users <- read_delim("E:/GOM/EMP 508/FINAL PROJECT/movierecommandation/users.dat", 
+                     "::", escape_double = FALSE, col_names = FALSE, 
+                     trim_ws = TRUE)
+users<as.data.frame(users)
+users<-users[,c(1,3,5,7,9)]
+users<-na.omit(users)
+users<-rename(users,c(X1="UserID",X3="Gender",X5="Age",X7="Occupation",X9="Zip-code"))
+View(users)
+
+movies <- read_delim("E:/GOM/EMP 508/FINAL PROJECT/movierecommandation/movies.dat", 
+                    "::", escape_double = FALSE, col_names = FALSE, 
+                    trim_ws = TRUE)
+movies<-as.data.frame(movies)
+movies<-movies[,c(1,3,5)]
+movies<-na.omit(movies)
+movies<-rename(movies,c(X1="MovieID",X3="Title",X5="Genres"))
+View(movies)
+
+rating<-read.csv("E:/GOM/EMP 508/FINAL PROJECT/movierecommandation/training_ratings_for_kaggle_comp.csv")
+View(rating)
+
+rating.user<-sqldf('select user, movie, rating, Age, Occupation from rating, users where rating.user==users.UserID')
+
+#PCA
+rating.user<-as.data.frame(rating.user)
+rating.userpc<-rating.user[,c(1,4,5)]
+rating.userpr<-princomp(~., data=rating.userpc,scale = T, center = T)
+summary(rating.userpr)
+rating.userpr$scale
+rating.userpr$center
+
+#SVM
+rating.user$rating<-factor(rating.user$rating)
+xyplot(Age~user,data=rating.user,groups = rating,auto.key=list(corner=c(1,0)))
+
+model1<-svm(Age~user,data=rating.user)
+plot(model1,rating.user,Age~user)
+
+x<-rating.user[,c(1,5)]
+y<-rating.user$rating
+model3<-svm(x,y,type = NULL, kernel = "radial", degree = 3, gamma =if (is.vector(x)) 1 else 1 / ncol(x),cross=5)
+pred<-predict(model3,x)
+table(pred,y)
+sum(pred==y)/length(y)
